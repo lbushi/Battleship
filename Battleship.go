@@ -87,22 +87,31 @@ func (ship *Ship) setName(name rune) {
 }
 
 // the number of ships a player has(currently 1 for debugging purpose but will be around 4 or 5)
-const shipNum int = 1
+const (
+	shipNum int = 5
+	shipSize int = 4
+)
 
 type Player struct {
 	ships [shipNum]Ship // the list of ships that the player owns
 }
 
-// NewPlayer is a contructor function for the player type that initializes the ships for each player
-func NewPlayer() *Player {
-	var player Player
-	var ship *Ship
-	for i := 0; i < shipNum; i++ {
-		ship = &player.ships[i]
-		ship.setName(rune('A' + i))
-		ship.appendPoint(Point{0, 0}, Point{0, 1})
+
+// addShip adds a ship with an orientation of dir(either vertical or horizontal) and coordinates of (x, y) to the set of ships of the player
+func (player *Player) initShip(index, x, y int, dir string) {
+	ship := &(player.ships[index])
+	if dir == "horizontal" {
+		ship.setName(rune('A' + index))
+		for j := 0; j < shipSize; j++ {
+			ship.appendPoint(Point{x, y + j})
+		}
+	} else {
+		ship.setName(rune('A' + index))
+		for j := 0; j < shipSize; j++ {
+			ship.appendPoint(Point{x + j, y})
+		}
 	}
-	return &player
+
 }
 
 // isDefeated returns a boolean indicating whether all ships of a player have been destroyed
@@ -166,23 +175,16 @@ func (game *Game) isOver() bool {
 }
 
 // NewGame is a constructor function that initializes the game by setting up the relations between the players, cells, and ships. It calls NewPlayer, defined above,
-//to initialize the players.
+// to initialize the players.
 func NewGame() *Game {
 	var game Game
 	for i := 0; i < playerNum; i++ {
-		game.players[i] = *NewPlayer()
+		game.players[i] = Player{}
 	}
 	for i := 0; i < playerNum; i++ {
 		for j := 0; j < gridSize; j++ {
 			for k := 0; k < gridSize; k++ {
 				game.grids[i][j][k] = Cell{coordinates: Point{j, k}}
-			}
-		}
-	}
-	for i := 0; i < playerNum; i++ {
-		for j, ship := range game.players[i].ships {
-			for _, p := range ship.parts {
-				game.grids[i][p.x][p.y].ship = &game.players[i].ships[j]
 			}
 		}
 	}
@@ -211,8 +213,29 @@ func (minsrv *minServer) Broadcast(message string) {
 // the main driver function for the long-lived communication between the server and the players
 func (minsrv *minServer) Handle() {
 	ch := make(chan struct{})
-	minsrv.Broadcast("The game has started!\n")
 	var wg sync.WaitGroup
+	wg.Add(playerNum)
+	for i, pl := range minsrv.players {
+		go func(i int, pl net.Conn) {
+			defer wg.Done()
+			io.WriteString(pl, "Please provide the ship positions for each of your 5 ships!\n")
+			var x, y int
+			var dir string
+			for j := 0; j < shipNum; j++ {
+				fmt.Fscan(pl, &x, &y, &dir)
+				minsrv.game.players[i].initShip(j, x, y, dir)
+			}
+			for i := 0; i < playerNum; i++ {
+				for j, ship := range minsrv.game.players[i].ships {
+					for _, p := range ship.parts {
+						minsrv.game.grids[i][p.x][p.y].ship = &minsrv.game.players[i].ships[j]
+					}
+				}
+			}
+		}(i, pl)
+	}
+	wg.Wait()
+	minsrv.Broadcast("The game has started!\n")
 	wg.Add(playerNum)
 	for i, pl := range minsrv.players {
 		go func(pl net.Conn) {
@@ -251,7 +274,8 @@ func (minsrv *minServer) Handle() {
 	}
 }
 
-// GetInput gets the input coordinates from the player whose turn it is at the moment
+// GetInput gets the input coordinates from the player whose turn it is at the moment or it gets the ship positions if the game has just started and the players
+// must initialize their ships
 func (minsrv *minServer) GetInput(player int) (int, int) {
 	var x, y int
 	fmt.Fscan(minsrv.players[player], &x, &y)
