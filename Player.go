@@ -7,7 +7,7 @@ type Player struct {
 // addShip adds a ship with an orientation of dir(either vertical or horizontal) and coordinates of (x, y) to the set of ships of the player
 func (player *Player) initShip(index, x, y int, dir string) {
 	ship := &(player.ships[index])
-	if dir == "horizontal" {
+	if dir == "h" {
 		ship.setName(rune('A' + index))
 		for j := 0; j < shipSize; j++ {
 			ship.appendPoint(Point{x, y + j})
