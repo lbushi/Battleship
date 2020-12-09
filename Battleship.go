@@ -79,6 +79,7 @@ func (minsrv *minServer) Handle() {
 			}(pl, i)
 		}
 		wg.Wait()
+		fmt.Fprintf(minsrv.players[1-minsrv.game.turn], "Your opponent hit cell %d, %d!\n", x, y)
 		if minsrv.game.isOver() {
 			minsrv.endGame(minsrv.game.turn)
 			break
