@@ -1,7 +1,7 @@
 # Battleship
 Multiplayer Battleship Game implemented in Golang
 
-Battleship is a concurrent multi-player command line implementation of the original Battleship game with board dimensions of 10x10 and where each player has 5 ships with the slight change that each ship occupies 5 cells on the board. The game has networking capabilities so that it allows two clients/players in different computers but in the same LAN to play with each other. 
+Battleship is a concurrent multi-player command line implementation of the original Battleship game with board dimensions of 10x10 and where each player has 5 ships with the slight change that each ship occupies 5 cells on the board. The game has networking capabilities so that it allows two clients/players in different machines but in the same LAN to play with each other. 
 
 Simply clone the repository on your own machine, run go build  and then start the produced executable which will wait for incoming requests from players who want to play and will pair them with other players. To request a game as a player you can use the nc command in UNIX-like systems to connect to the server on port 8000, given that the server is already running on the target computer. 
 
